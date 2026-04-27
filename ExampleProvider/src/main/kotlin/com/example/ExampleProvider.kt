@@ -1,36 +1,46 @@
 package com.example
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
-class ProtonMovies : MainAPI() { 
-    override var mainUrl = "https://protonmovies.com" 
-    override var name = "Proton Movies"
+class ExampleProvider : MainAPI() {
+    override var mainUrl = "https://protonmovies.com"
+    override var name = "ProtonMovies"
     override val hasMainPage = true
-    override var lang = "en"
-    override val hasQuickSearch = true
+    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val url = "$mainUrl/search?q=$query"
+        val url = "$mainUrl/search/$query"
         val document = app.get(url).document
+        
         return document.select(".iq-card").mapNotNull {
             it.toSearchResult()
         }
     }
 
-    private fun Element.toSearchResult(): SearchResponse {
-        val title = this.selectFirst(".iq-title a")?.text() ?: ""
-        val href = fixUrl(this.selectFirst(".iq-title a")?.attr("href") ?: "")
+    private fun Element.toSearchResult(): SearchResponse? {
+        val title = this.selectFirst(".iq-title a")?.text() ?: return null
+        val href = fixUrl(this.selectFirst(".iq-title a")?.attr("href") ?: return null)
         val posterUrl = this.selectFirst("img")?.attr("src")
-        val isMovie = this.selectFirst(".movie-tag .badge")?.text()?.contains("Movie", true) ?: true
         
-        val type = if (isMovie) TvType.Movie else TvType.TvSeries
-        
-        return newMovieSearchResponse(title, href, type) {
+        return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
+    }
+
+    override suspend fun load(url: String): LoadResponse? {
+        // TODO: Implement movie/series page loading
+        return null
+    }
+
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        // TODO: Implement link extraction
+        return false
     }
 }
