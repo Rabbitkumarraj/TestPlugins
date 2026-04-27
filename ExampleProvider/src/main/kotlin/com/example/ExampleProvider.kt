@@ -33,3 +33,4 @@ class ProtonMovies : MainAPI() {
         }
     }
 }
+
