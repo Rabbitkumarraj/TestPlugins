@@ -1,21 +1,35 @@
-package com.example
+package com.lagradost
 
-import com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
+import org.jsoup.nodes.Element
 
-class ExampleProvider : MainAPI() { // All providers must be an instance of MainAPI
-    override var mainUrl = "https://example.com/" 
-    override var name = "Example provider"
-    override val supportedTypes = setOf(TvType.Movie)
-
-    override var lang = "en"
-
-    // Enable this when your provider has a main page
+class ProtonMovies : MainAPI() { 
+    override var mainUrl = "https://protonmovies.com" 
+    override var name = "Proton Movies"
     override val hasMainPage = true
+    override var lang = "en"
+    override val hasQuickSearch = true
 
-    // This function gets called when you search for something
     override suspend fun search(query: String): List<SearchResponse> {
-        return listOf()
+        val document = app.get("$mainUrl/search?q=$query").document
+        return document.select(".iq-card").mapNotNull {
+            it.toSearchResult()
+        }
+    }
+
+    private fun Element.toSearchResult(): SearchResponse {
+        val title = this.selectFirst(".iq-title a")?.text() ?: ""
+        val href = fixUrl(this.selectFirst(".iq-title a")?.attr("href") ?: "")
+        val posterUrl = this.selectFirst("img")?.attr("src")
+        val type = if (this.selectFirst(".movie-tag .badge")?.text()?.contains("Movie", true) == true) {
+            TvType.Movie
+        } else {
+            TvType.TvSeries
+        }
+        
+        return newMovieSearchResponse(title, href, type) {
+            this.posterUrl = posterUrl
+        }
     }
 }
